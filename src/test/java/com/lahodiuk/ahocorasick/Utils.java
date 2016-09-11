@@ -41,7 +41,7 @@ public class Utils {
 	 * Find all needles using Aho-Corasick algorithm
 	 */
 	public static List<Found> matchUsingAhoCorasick(String haystack, String... needles) {
-		AhoCorasick alg = new AhoCorasickOptimized(needles);
+		AhoCorasickOptimized alg = new AhoCorasickOptimized(needles);
 
 		List<Found> result = new ArrayList<>();
 		alg.match(haystack, (start, end, found) -> result.add(new Found(found, start, end)));

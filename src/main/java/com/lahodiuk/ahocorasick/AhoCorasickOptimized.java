@@ -33,7 +33,7 @@ import java.util.Set;
  *
  * @author of the implementation is Yurii Lahodiuk (yura.lagodiuk@gmail.com)
  */
-public class AhoCorasickOptimized extends AhoCorasick {
+public class AhoCorasickOptimized {
 
 	private static final int INITIAL_STATE = 0;
 	private static final int FAIL = -1;
@@ -73,7 +73,6 @@ public class AhoCorasickOptimized extends AhoCorasick {
 		this.calculateFailureTransitions();
 	}
 
-	@Override
 	public final void match(final String text, MatchCallback callback) {
 
 		int state = INITIAL_STATE;
@@ -269,5 +268,10 @@ public class AhoCorasickOptimized extends AhoCorasick {
 		}
 		sb.append("}");
 		System.out.println(sb.toString());
+	}
+
+	public static interface MatchCallback {
+
+		void onMatch(int startPosition, int endPosition, String matched);
 	}
 }

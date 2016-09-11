@@ -146,4 +146,9 @@ public class AhoCorasick {
 		}
 		return Collections.emptyList();
 	}
+
+	public static interface MatchCallback {
+
+		void onMatch(int startPosition, int endPosition, String matched);
+	}
 }
