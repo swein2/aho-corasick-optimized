@@ -146,11 +146,4 @@ public class AhoCorasick {
 		}
 		return Collections.emptyList();
 	}
-
-	public static void main(String[] args) {
-		AhoCorasick alg = new AhoCorasick("he", "she", "his", "hers");
-		alg.match("ushers", (start, end, found) -> System.out.println(found));
-		System.out.println();
-		alg.match("ushers ushers ushers ushers ushers", (start, end, found) -> System.out.println(found));
-	}
 }

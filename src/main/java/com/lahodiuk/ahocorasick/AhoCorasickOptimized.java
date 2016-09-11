@@ -270,14 +270,4 @@ public class AhoCorasickOptimized extends AhoCorasick {
 		sb.append("}");
 		System.out.println(sb.toString());
 	}
-
-	public static void main(String[] args) {
-		AhoCorasickOptimized alg = new AhoCorasickOptimized("he", "she", "his", "hers");
-		alg.match("ushers", (start, end, found) -> System.out.println(found));
-		System.out.println();
-		alg.match("ushers ushers ushers ushers ushers", (start, end, found) -> System.out.println(found));
-
-		System.out.println();
-		alg.generateGraphvizAutomatonRepresentation(false);
-	}
 }
