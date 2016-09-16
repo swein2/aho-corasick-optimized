@@ -27,7 +27,7 @@ public class Example {
 
 		// The structure of automaton can be visualized using Graphviz format
 		System.out.println("\n Graphviz structure of automaton:");
-		ac.generateGraphvizAutomatonRepresentation(false);
+		System.out.println(ac.generateGraphvizAutomatonRepresentation(false))
 	}
 }
 ```

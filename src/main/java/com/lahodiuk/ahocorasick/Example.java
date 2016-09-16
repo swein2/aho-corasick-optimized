@@ -17,6 +17,6 @@ public class Example {
 		System.out.println();
 
 		System.out.println("Graphviz structure of automaton:");
-		ac.generateGraphvizAutomatonRepresentation(false);
+		System.out.println(ac.generateGraphvizAutomatonRepresentation(false));
 	}
 }

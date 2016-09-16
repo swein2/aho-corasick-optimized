@@ -13,6 +13,9 @@
 //   limitations under the License.
 package com.lahodiuk.ahocorasick;
 
+// Java Collections are used only during the building of the automaton.
+// The automaton itself uses only the primitive data types 
+// and does not produce garbage during the matching.
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -68,9 +71,44 @@ public class AhoCorasickOptimized {
 		this.initializeOutputTable(maxAmountOfStates);
 		this.initializeFailureTransitions(maxAmountOfStates);
 
-		this.calculateTransitionsTable(patterns);
+		int actualStatesCount = this.calculateTransitionsTable(patterns);
+
+		this.adjustTransitionsTableSize(actualStatesCount);
+		this.adjustOutputTableSize(actualStatesCount);
+		this.adjustFailureTransitionsSize(actualStatesCount);
+
 		this.makeInitialStateNeverFail();
 		this.calculateFailureTransitions();
+	}
+
+	public void adjustFailureTransitionsSize(int actualStatesCount) {
+		if (actualStatesCount == this.fail.length) {
+			return;
+		}
+		int[] adjustedFail = new int[actualStatesCount];
+		System.arraycopy(this.fail, 0, adjustedFail, 0, actualStatesCount);
+		this.fail = adjustedFail;
+	}
+
+	public void adjustOutputTableSize(int actualStatesCount) {
+		if (actualStatesCount == this.output.length) {
+			return;
+		}
+		@SuppressWarnings("unchecked")
+		List<String>[] adjustedOutput = new List[actualStatesCount];
+		System.arraycopy(this.output, 0, adjustedOutput, 0, actualStatesCount);
+		this.output = adjustedOutput;
+	}
+
+	public void adjustTransitionsTableSize(int actualStatesCount) {
+		if (actualStatesCount == this.goTo.length) {
+			return;
+		}
+		int[][] adjustedGoTo = new int[actualStatesCount][this.charToIntMapping.length + 1];
+		for (int i = 0; i < actualStatesCount; i++) {
+			adjustedGoTo[i] = this.goTo[i];
+		}
+		this.goTo = adjustedGoTo;
 	}
 
 	public final void match(final String text, MatchCallback callback) {
@@ -180,13 +218,14 @@ public class AhoCorasickOptimized {
 					}
 
 					this.fail[stateReachableFromCurr] = this.goTo[state][chrInt];
-					this.output[stateReachableFromCurr].addAll(this.output[this.fail[stateReachableFromCurr]]);
+					this.output[stateReachableFromCurr].addAll(
+							this.output[this.fail[stateReachableFromCurr]]);
 				}
 			}
 		}
 	}
 
-	private void calculateTransitionsTable(String... patterns) {
+	private int calculateTransitionsTable(String... patterns) {
 
 		int newState = 0;
 		for (String s : patterns) {
@@ -225,53 +264,108 @@ public class AhoCorasickOptimized {
 			// state
 			this.output[state].add(s);
 		}
+
+		return newState + 1;
 	}
 
-	public void generateGraphvizAutomatonRepresentation(boolean displayEdgesToInitialState) {
-		StringBuilder sb = new StringBuilder();
-		sb.append("digraph automaton {").append('\n');
-		{
-			sb.append("\tgraph [rankdir=LR];\n");
-			Queue<Integer> queue = new LinkedList<>();
-			queue.add(INITIAL_STATE);
-
-			List<Integer> visitedStates = new ArrayList<>();
-
-			while (!queue.isEmpty()) {
-				int state = queue.remove();
-				visitedStates.add(state);
-
-				for (int charInt = 0; charInt < this.charToIntMapping.length; charInt++) {
-					if ((this.goTo[state][charInt] != FAIL) && (this.goTo[state][charInt] != INITIAL_STATE)) {
-						queue.add(this.goTo[state][charInt]);
-
-						sb.append('\t').append(state).append(" -> ").append(this.goTo[state][charInt])
-								.append(" [label=").append(this.charToIntMapping[charInt]).append(", weight=100, style=bold];").append("\n");
-					}
-				}
-			}
-
-			for (int state : visitedStates) {
-				if (displayEdgesToInitialState || ((this.fail[state] != INITIAL_STATE) || (state == INITIAL_STATE))) {
-					sb.append('\t').append(state).append(" -> ").append(this.fail[state])
-							.append(" [style=dashed, color=gray, constraint=false];").append("\n");
-				}
-			}
-
-			for (int state : visitedStates) {
-				if (!this.output[state].isEmpty()) {
-					sb.append('\t').append(state).append(" [shape=doublecircle];\n");
-				} else {
-					sb.append('\t').append(state).append(" [shape=circle];\n");
-				}
-			}
-		}
-		sb.append("}");
-		System.out.println(sb.toString());
+	public String generateGraphvizAutomatonRepresentation(boolean displayEdgesToInitialState) {
+		return Util.generateGraphvizAutomatonRepresentation(this, displayEdgesToInitialState);
 	}
 
 	public static interface MatchCallback {
 
 		void onMatch(int startPosition, int endPosition, String matched);
+	}
+
+	public static class Util {
+
+		private static final String STYLE_FAILURE_TRANSITION = " [style=dashed, color=gray, constraint=false];";
+		private static final String STYLE_STATE_WITHOUT_OUTPUT = " [shape=circle];";
+		private static final String STYLE_STATE_WITH_OUTPUT = " [shape=doublecircle];";
+		private static final char TAB = '\t';
+		private static final char NEW_LINE = '\n';
+
+		public static String generateGraphvizAutomatonRepresentation(
+				AhoCorasickOptimized automaton,
+				boolean displayEdgesToInitialState) {
+
+			StringBuilder sb = new StringBuilder();
+			sb.append("digraph automaton {").append(NEW_LINE);
+
+			sb.append(TAB).append("graph [rankdir=LR];").append(NEW_LINE);
+			Queue<Integer> queue = new LinkedList<>();
+			queue.add(INITIAL_STATE);
+
+			List<Integer> visitedStates = new ArrayList<>();
+
+			// BFS traversal of the automaton
+			while (!queue.isEmpty()) {
+				int state = queue.remove();
+				visitedStates.add(state);
+
+				for (int charInt = 0; charInt < automaton.charToIntMapping.length; charInt++) {
+
+					if ((automaton.goTo[state][charInt] != FAIL)
+							&& (automaton.goTo[state][charInt] != INITIAL_STATE)) {
+
+						queue.add(automaton.goTo[state][charInt]);
+
+						appendAutomatonTransitionGraphviz(automaton, sb, state, charInt);
+					}
+				}
+			}
+
+			appendFailureTransitionsToGraphviz(
+					automaton, displayEdgesToInitialState, sb, visitedStates);
+
+			displayStatesInGraphviz(automaton, sb, visitedStates);
+
+			sb.append("}");
+			return sb.toString();
+		}
+
+		public static void appendAutomatonTransitionGraphviz(
+				AhoCorasickOptimized automaton,
+				StringBuilder sb,
+				int state,
+				int charInt) {
+
+			sb.append(TAB).append(state).append(" -> ").append(automaton.goTo[state][charInt])
+					.append(" [label=").append(automaton.charToIntMapping[charInt])
+					.append(", weight=100, style=bold];").append(NEW_LINE);
+		}
+
+		private static void displayStatesInGraphviz(
+				AhoCorasickOptimized automaton,
+				StringBuilder sb,
+				List<Integer> visitedStates) {
+
+			for (int state : visitedStates) {
+				if (!automaton.output[state].isEmpty()) {
+					sb.append(TAB).append(state)
+							.append(STYLE_STATE_WITH_OUTPUT).append(NEW_LINE);
+				} else {
+					sb.append(TAB).append(state)
+							.append(STYLE_STATE_WITHOUT_OUTPUT).append(NEW_LINE);
+				}
+			}
+		}
+
+		private static void appendFailureTransitionsToGraphviz(
+				AhoCorasickOptimized automaton,
+				boolean displayEdgesToInitialState,
+				StringBuilder sb,
+				List<Integer> states) {
+
+			for (int state : states) {
+				if (displayEdgesToInitialState
+						|| ((automaton.fail[state] != INITIAL_STATE)
+						|| (state == INITIAL_STATE))) {
+
+					sb.append(TAB).append(state).append(" -> ").append(automaton.fail[state])
+							.append(STYLE_FAILURE_TRANSITION).append(NEW_LINE);
+				}
+			}
+		}
 	}
 }
